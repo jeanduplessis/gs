@@ -17,7 +17,7 @@
 | **Branch commit stats** | Ahead/behind counts in the Branch header, rendered `↑N ↓N` and aligned with Entry stats. | Discussing branch ahead/behind count layout or styling. | remote counts, sync status, tracking summary |
 | **Upstream divergence** | Ahead/behind counts between the current branch and its configured upstream. | Describing `↑N ↓N` in the branch header. | remote counts, sync status, tracking summary |
 | **Detached HEAD** | Repository state rendered in the branch header as `detached @ <short-sha>`. | Handling non-branch HEAD output. | detached branch, anonymous branch |
-| **Border line** | Horizontal `─` line rendered above and below the Branch header when sections are visible, sized to the widest rendered plain line and muted gray in colored output. | Discussing the visual frame around branch context. | divider, separator, rule unless generic |
+| **Border line** | Horizontal `─` line rendered above and below the Branch header, sized to the widest rendered plain line and muted gray in colored output. | Discussing the visual frame around branch context. | divider, separator, rule unless generic |
 | **Section** | One visible grouped change category: `Staged`, `Tracked`, or `Untracked`. | Discussing grouping, counts, colors, ordering, and visibility. | group, bucket, category |
 | **Staged section** | Section containing index changes that are commit-ready; heading is plain, entries are green in colored output. | Referring to staged/index entries and green entry styling. | cached section, index section, staged files when meaning entries |
 | **Tracked section** | Section containing unstaged worktree changes to tracked files; heading is plain, entries are tan in colored output. | Referring only to unstaged tracked-file changes and tan entry styling. | modified section, changed section, unstaged section |
@@ -33,7 +33,7 @@
 | **Stats separator** | The `/` between additions/deletions inside Entry stats; vertically aligned and muted gray in colored output. | Discussing alignment or styling of the separator in `+N/-N` or `+?/-?`. | slash unless meaning generic punctuation |
 | **Known text stats** | Entry stats with concrete additions/deletions for text changes, rendered `+N/-N`. | Describing text diff output. | changed lines when deletion/addition split matters |
 | **Unknown stats** | Entry stats for binary or otherwise unknown line changes, rendered `+?/-?`. | Handling binary, submodule, or non-line-oriented changes. | binary, no stats, `+0/-0` |
-| **Clean repository output** | Output with branch header followed by `✓ working tree clean` when no sections contain entries, without border lines. | Defining no-change behavior. | no output, clean message only |
+| **Clean repository output** | Output with Branch header framed by Border lines followed by `✓ working tree clean` when no sections contain entries. | Defining no-change behavior. | no output, clean message only |
 | **Left buffer** | One leading space added to every non-blank output line. | Discussing output indentation at the terminal edge. | margin unless referring to general layout |
 | **Color mode** | CLI option `--color=auto|always|never`, defaulting to `auto`. | Controlling ANSI output. | theme, palette option, color flag unless discussing parsing |
 | **Deterministic ANSI 256-color styling** | Fixed terminal colors: additions green (`38;5;2`), deletions red (`38;5;1`), stats separator and border line muted gray (`38;5;244`), staged entries green (`38;5;2`), tracked entries tan (`38;5;180`), untracked entries muted gray (`38;5;245`); section headings stay plain. | Defining color contract and color snapshot expectations. | truecolor, basic ANSI only, custom theme |
@@ -64,7 +64,7 @@
 - Align **Branch commit stats** with **Entry stats** when sections are visible.
 - Vertically align the **Stats separator** across visible **Entry** rows.
 - Render **Rename display** as `old/path -> new/path` and sort by destination path.
-- Render **Border line** values above and below the **Branch header** only when at least one **Section** is visible; do not render them for **Clean repository output**.
+- Render **Border line** values above and below the **Branch header** for both sectioned output and **Clean repository output**.
 - Hide empty **Section** values; use **Clean repository output** only when no sections contain entries.
 - Use **Color mode** exactly as `--color=auto|always|never`, default `auto`.
 - Use **Deterministic ANSI 256-color styling**; do not add theming or truecolor requirements.
@@ -79,7 +79,7 @@
 
 - **`gs`** prints one **Enhanced status view** for the current repository.
 - **Enhanced status view** contains a **Left buffer**, one **Branch header**, optional **Border line** values, and zero or more visible **Section** values.
-- **Border line** values frame the **Branch header** only when at least one **Section** is visible.
+- **Border line** values frame the **Branch header** in both sectioned output and **Clean repository output**.
 - A **Section** contains zero or more **Entry** values; empty sections are hidden.
 - An **Entry** contains one **Git-letter status symbol**, one **Display path**, and one **Entry stats** value.
 - **Entry stats** are either **Known text stats** or **Unknown stats** and contain one **Stats separator**.

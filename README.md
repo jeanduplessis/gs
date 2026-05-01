@@ -102,10 +102,12 @@ gs --color=never   # plain output for scripts or copy/paste
 
 Output is padded with a one-space left buffer.
 
-A clean repository shows the Branch header and Clean repository output:
+A clean repository shows the Branch header framed by border lines plus Clean repository output:
 
 ```text
+ ────────────────────
  Branch: main ↑0 ↓0
+ ────────────────────
  ✓ working tree clean
 ```
 

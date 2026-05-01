@@ -23,7 +23,17 @@ pub fn render(view: &StatusView, color_mode: ColorMode, stdout_is_tty: bool) -> 
     let mut output = String::new();
 
     if visible_sections.is_empty() {
-        output.push_str(&render_branch_header(&view.header));
+        let branch_header = render_branch_header(&view.header);
+        let border_width = branch_header
+            .chars()
+            .count()
+            .max("✓ working tree clean".chars().count());
+        let border = render_border(border_width, use_color);
+        output.push_str(&border);
+        output.push('\n');
+        output.push_str(&branch_header);
+        output.push('\n');
+        output.push_str(&border);
         output.push('\n');
         output.push_str("✓ working tree clean\n");
         return add_left_buffer(output);
@@ -240,7 +250,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Never, false),
-            " Branch: main ↑0 ↓0\n ✓ working tree clean\n"
+            " ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n"
         );
     }
 

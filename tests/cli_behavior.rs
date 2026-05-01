@@ -88,7 +88,7 @@ fn clean_repository_output_and_outside_repository_error_are_user_visible() {
         .current_dir(repo.path())
         .assert()
         .success()
-        .stdout(" Branch: main ↑0 ↓0\n ✓ working tree clean\n")
+        .stdout(" ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n")
         .stderr("");
 
     let outside = TempDir::new().expect("outside temp dir");
@@ -241,7 +241,10 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
 
     git(repo.path(), &["fetch", "origin"]);
     let output = gs_output(repo.path(), &["--color=never"]);
-    assert_eq!(output, " Branch: main ↑1 ↓1\n ✓ working tree clean\n");
+    assert_eq!(
+        output,
+        " ────────────────────\n Branch: main ↑1 ↓1\n ────────────────────\n ✓ working tree clean\n"
+    );
 
     let short = git(repo.path(), &["rev-parse", "--short", "HEAD"])
         .trim()
@@ -250,7 +253,9 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        format!(" detached @ {short}\n ✓ working tree clean\n")
+        format!(
+            " ────────────────────\n detached @ {short}\n ────────────────────\n ✓ working tree clean\n"
+        )
     );
 }
 
@@ -297,7 +302,10 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     let submodule_path = parent.path().join("vendor/sub");
     write(submodule_path.join("inside.txt"), "dirty internal change\n");
     let output = gs_output(parent.path(), &["--color=never"]);
-    assert_eq!(output, " Branch: main ↑0 ↓0\n ✓ working tree clean\n");
+    assert_eq!(
+        output,
+        " ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n"
+    );
 
     git(
         &submodule_path,
