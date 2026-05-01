@@ -1,102 +1,146 @@
 # gs
 
-`gs` is a Rust read-only CLI that prints an Enhanced status view for the current Git repository.
+`gs` prints a compact, colorized enhanced status view for the current Git repository.
 
-It uses a Git library backend (`git2`/libgit2), not the installed `git` command, for repository inspection. The binary is intentionally thin: it parses CLI options, writes stdout/stderr, and returns exit codes; reusable library modules provide the Repository inspector, Change model, Diff/stat calculator, and Renderer.
+## Install
+
+### Requirements
+
+- Rust/Cargo installed locally
+
+Check Cargo:
+
+```sh
+cargo --version
+```
+
+If Cargo is missing, install Rust from <https://rustup.rs/> or your system package manager.
+
+### Install from this checkout
+
+From the repository root:
+
+```sh
+cargo install --path .
+```
+
+This installs `gs` to Cargo's bin directory, usually:
+
+```sh
+~/.cargo/bin/gs
+```
+
+Verify installation:
+
+```sh
+gs --version
+which gs
+```
+
+If `gs` is not found, add Cargo's bin directory to your `PATH`.
+
+For zsh, add this to `~/.zshrc`:
+
+```sh
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+Then reload your shell:
+
+```sh
+source ~/.zshrc
+```
+
+### Update after local changes
+
+From the repository root:
+
+```sh
+cargo install --path . --force
+```
+
+### Uninstall
+
+```sh
+cargo uninstall gs
+```
 
 ## Usage
 
+Run inside any Git repository:
+
 ```sh
-gs [--color=auto|always|never]
+gs
 ```
 
-`--color` defaults to `auto`:
+Color options:
 
-- `auto`: emit ANSI color only when stdout is a TTY.
-- `always`: emit deterministic ANSI 256-color styling.
-- `never`: emit plain output.
-
-Outside a Git repository, `gs` prints this to stderr and exits `1`:
-
-```text
-gs: not a git repository
+```sh
+gs --color=auto    # default: color only when stdout is a TTY
+gs --color=always  # always emit ANSI 256-color output
+gs --color=never   # plain output for scripts or copy/paste
 ```
 
-## Output contract
+## Output
 
-The Enhanced status view starts with a Branch header, followed by visible change Sections. Empty Sections are hidden.
-
-A clean repository renders branch context plus Clean repository output:
+A clean repository shows the Branch header and Clean repository output:
 
 ```text
 main
 ✓ working tree clean
 ```
 
-A repository with changes renders Sections in this order:
-
-1. `Staged`
-2. `Tracked`
-3. `Untracked`
-
-Section headers include Section count, i.e. rendered Entry count:
+A repository with changes shows visible Sections only:
 
 ```text
 main ↑1 ↓2
 Staged (1)
-  M src/lib.rs  +3/-1
+  M src/lib.rs      +3/-1
 
 Tracked (1)
-  D old.txt     +0/-4
+  D old.txt         +0/-4
 
 Untracked (1)
-  ? notes.txt   +2/-0
+  ? notes.txt       +2/-0
 ```
 
-Each Entry line uses:
+Sections:
 
-- two-space indentation
-- one Git-letter status symbol: `M`, `A`, `D`, `R`, or `?`
-- Repository-root-relative Display path
-- padding to align the Entry stats column and vertically align the `/` separator across Entries
-- Entry stats as `+N/-N` for Known text stats or `+?/-?` for Unknown stats
+- `Staged`: index changes that are commit-ready.
+- `Tracked`: unstaged worktree changes to tracked files.
+- `Untracked`: untracked, non-ignored files.
 
-## Behavior details
+Entry stats:
 
-- `Staged` contains index changes that are commit-ready.
-- `Tracked` contains unstaged worktree changes to tracked files.
-- `Untracked` contains untracked, non-ignored files.
-- Ignored files are excluded; there is no ignored-files Section.
+- `+N/-N`: Known text stats.
+- `+?/-?`: Unknown stats, used for binary, non-line-oriented, or submodule path-level changes.
+- The `/` separator is vertically aligned across entries.
+
+Path and sorting behavior:
+
+- Paths are repository-root-relative, regardless of where you run `gs` inside the repo.
 - Entries sort alphabetically by Display path.
-- Paths are displayed relative to the repository root, independent of invocation directory.
-- Partially staged files render twice: once in `Staged` and once in `Tracked`, with separate Entry stats.
-- Rename display uses `old/path -> new/path`; renames sort by destination path.
-- Untracked text files render all lines as additions: `+N/-0`.
-- Binary, non-line-oriented, and parent-visible submodule path-level changes render Unknown stats: `+?/-?`.
-- Submodule internals are not inspected.
-- Branch headers render `branch ↑ahead ↓behind`; missing or zero upstream divergence values are omitted.
-- Detached HEAD renders `detached @ <short-sha>`.
+- Renames display as `old/path -> new/path`.
+- Partially staged files appear once in `Staged` and once in `Tracked`, with separate stats.
 
-## Color contract
+Branch header behavior:
 
-Forced color output uses deterministic ANSI 256-color styling:
+- Branches render as `branch ↑ahead ↓behind`.
+- Missing or zero upstream counts are omitted.
+- Detached HEAD renders as `detached @ <short-sha>`.
 
-- additions: green (`38;5;2`)
-- deletions: red (`38;5;1`)
-- stats separator `/`: muted gray (`38;5;244`)
-- Staged Section and Entries: green (`38;5;2`)
-- Tracked Section and Entries: tan (`38;5;180`)
-- Untracked Section and Entries: muted gray (`38;5;245`)
+## Errors
 
-## Development and testing
+Outside a Git repository, `gs` exits with code `1` and prints:
 
-Run:
+```text
+gs: not a git repository
+```
+
+## Development
+
+Run tests:
 
 ```sh
 cargo test
 ```
-
-Tests verify observable behavior through public interfaces:
-
-- Temporary Git repository tests cover clean repositories, outside-repository errors, untracked files, Ignored file exclusion, tracked and staged changes, Partially staged files, Rename display, Unknown stats, Branch header divergence, Detached HEAD, and submodule path-level behavior.
-- Renderer tests cover plain output, forced-color output, `auto` color behavior, Section count, hidden empty Sections, aligned stats columns, Clean repository output, and Unknown stats.
