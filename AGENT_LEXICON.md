@@ -28,16 +28,19 @@
 | **Rename display** | The `old/path -> new/path` display path for renamed entries, sorted by destination path. | Handling renamed files in output and tests. | destination-only path, renamed badge |
 | **Partially staged file** | A path with both staged index changes and unstaged tracked worktree changes. | Requiring duplicate entries across `Staged` and `Tracked` with separate stats. | mixed file, partially indexed file, combined staged file |
 | **Entry stats** | Per-entry changed-line indicator rendered as known `+N/-N` or unknown `+?/-?`, with `/` separators vertically aligned across entries. | Referring to stats shown at the aligned end of each entry row. | line count, diff count, numstat unless backend-specific |
+| **Stats separator** | The `/` between additions and deletions inside Entry stats; vertically aligned and muted gray in colored output. | Discussing alignment or styling of the separator in `+N/-N` or `+?/-?`. | slash unless meaning generic punctuation |
 | **Known text stats** | Entry stats with concrete additions/deletions for text changes, rendered `+N/-N`. | Describing text diff output. | changed lines when deletion/addition split matters |
 | **Unknown stats** | Entry stats for binary or otherwise unknown line changes, rendered `+?/-?`. | Handling binary, submodule, or non-line-oriented changes. | binary, no stats, `+0/-0` |
 | **Clean repository output** | Output with branch header followed by `✓ working tree clean` when no sections contain entries. | Defining no-change behavior. | no output, clean message only |
 | **Color mode** | CLI option `--color=auto|always|never`, defaulting to `auto`. | Controlling ANSI output. | theme, palette option, color flag unless discussing parsing |
-| **Deterministic ANSI 256-color styling** | Fixed terminal colors: additions green, deletions red, stats separator muted gray, staged green, tracked tan, untracked muted gray. | Defining color contract and color snapshot expectations. | truecolor, basic ANSI only, custom theme |
-| **Ignored file exclusion** | Rule that ignored files never appear in first-version output. | Handling `.gitignore`/ignore-rule behavior. | ignored section, show ignored, muted ignored files |
+| **Deterministic ANSI 256-color styling** | Fixed terminal colors: additions green (`38;5;2`), deletions red (`38;5;1`), stats separator muted gray (`38;5;244`), staged green (`38;5;2`), tracked tan (`38;5;180`), untracked muted gray (`38;5;245`). | Defining color contract and color snapshot expectations. | truecolor, basic ANSI only, custom theme |
+| **Ignored file exclusion** | Rule that ignored files never appear in normal output. | Handling `.gitignore`/ignore-rule behavior. | ignored section, show ignored, muted ignored files |
 | **Submodule path-level change** | A parent-repository-visible submodule path change without inspecting inside the submodule. | Handling submodules. | recursive submodule status, submodule internals |
 | **Temporary Git repository test** | Integration test that creates an isolated Git repository and asserts observable `gs` behavior. | Testing repository behavior. | mocked Git test, unit-only status test |
 | **Rendered output snapshot** | Assertion over user-visible terminal text, including layout and optionally forced color. | Testing renderer contracts. | implementation snapshot, internal model snapshot |
-| **PRD epic** | Beads epic task containing the approved product requirements for `gs`; current epic ID is `gs-y9o`. | Creating follow-up implementation tasks. | GitHub issue, task spec, parent story |
+| **End-user README** | `README.md` focused on installing, running, understanding output, colors, and errors for `gs`. | Editing top-level docs for users. | architecture spec, implementation notes, internal design doc |
+| **Local Cargo install** | Installing `gs` from this checkout with `cargo install --path .`, reinstalling with `--force`, and uninstalling with `cargo uninstall gs`. | Documenting local installation and updates. | package distribution, Homebrew install unless added later |
+| **PRD epic** | Closed beads epic containing the approved product requirements for `gs`; current epic ID is `gs-y9o`. | Referencing initial product scope or historical source context. | GitHub issue, active task spec |
 
 ## Agent Rules
 
@@ -53,14 +56,16 @@
 - Render **Partially staged file** as two entries: one in **Staged section**, one in **Tracked section**, with separate **Entry stats**.
 - Render untracked text files as **Known text stats** with all lines added: `+N/-0`.
 - Render binary or non-line-oriented changes as **Unknown stats**: `+?/-?`; do not render `binary` or `+0/-0`.
+- Vertically align the **Stats separator** across visible **Entry** rows.
 - Render **Rename display** as `old/path -> new/path` and sort by destination path.
 - Hide empty **Section** values; use **Clean repository output** only when no sections contain entries.
 - Use **Color mode** exactly as `--color=auto|always|never`, default `auto`.
 - Use **Deterministic ANSI 256-color styling**; do not add theming or truecolor requirements.
-- Enforce **Ignored file exclusion**; do not add ignored-file output in first-version tasks.
+- Enforce **Ignored file exclusion**; do not add ignored-file output unless explicitly changing product scope.
 - Treat submodules as **Submodule path-level change** only; do not inspect submodule internals.
+- Keep the **End-user README** focused on **Local Cargo install**, usage, output, colors, and errors.
 - Use **Temporary Git repository test** for repository behavior and **Rendered output snapshot** for layout/color behavior.
-- Attach follow-up implementation tasks to **PRD epic** `gs-y9o`.
+- Reference **PRD epic** `gs-y9o` when historical product scope matters.
 
 ## Relationships
 
@@ -68,13 +73,14 @@
 - **Enhanced status view** contains one **Branch header** and zero or more visible **Section** values.
 - A **Section** contains zero or more **Entry** values; empty sections are hidden.
 - An **Entry** contains one **Git-letter status symbol**, one **Display path**, and one **Entry stats** value.
-- **Entry stats** are either **Known text stats** or **Unknown stats**.
+- **Entry stats** are either **Known text stats** or **Unknown stats** and contain one **Stats separator**.
 - A **Partially staged file** produces one **Staged section** entry and one **Tracked section** entry.
 - **Rename display** is a kind of **Display path**.
 - **Upstream divergence** is rendered inside the **Branch header**.
 - **Repository inspector**, **Change model**, **Diff/stat calculator**, and **Renderer** live behind the **Library-plus-thin-binary** architecture.
 - **Temporary Git repository test** validates repository behavior; **Rendered output snapshot** validates renderer behavior.
-- **PRD epic** `gs-y9o` is the parent/source for follow-up implementation tasks.
+- **End-user README** documents **Local Cargo install** and everyday `gs` usage.
+- **PRD epic** `gs-y9o` is the closed parent/source for initial implementation context.
 
 ## Ambiguities
 
@@ -89,5 +95,6 @@
 | branch summary | Could include verbose prose or labels. | Use **Branch header** with compact `branch ↑ahead ↓behind` format. |
 | clean | Could mean no output, no file changes, or no branch divergence. | Use **Clean repository output** when no sections contain entries; branch header still renders. |
 | color | Could mean theme, auto-detection, or exact palette. | Use **Color mode** for CLI behavior and **Deterministic ANSI 256-color styling** for palette. |
+| slash | Could mean punctuation, path separator, or stats separator. | Use **Stats separator** for the `/` between additions and deletions in Entry stats. |
 | submodule changes | Could include recursive child repo status or parent pointer changes. | Use **Submodule path-level change** only. |
 | tests | Could mean unit, integration, snapshot, or mocked tests. | Use **Temporary Git repository test** for Git behavior and **Rendered output snapshot** for renderer output. |
