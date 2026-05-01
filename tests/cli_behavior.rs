@@ -88,7 +88,7 @@ fn clean_repository_output_and_outside_repository_error_are_user_visible() {
         .current_dir(repo.path())
         .assert()
         .success()
-        .stdout("main\n✓ working tree clean\n")
+        .stdout(" Branch: main ↑0 ↓0\n ✓ working tree clean\n")
         .stderr("");
 
     let outside = TempDir::new().expect("outside temp dir");
@@ -116,7 +116,7 @@ fn untracked_text_files_are_root_relative_sorted_counted_and_ignore_ignored_file
     let output = gs_output(&repo.path().join("src/nested"), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nUntracked (2)\n  ? src/alpha.txt  +3/-0\n  ? zeta.txt       +2/-0\n"
+        " ────────────────────────\n Branch: main       ↑0 ↓0\n ────────────────────────\n Untracked (2)\n   ? src/alpha.txt  +3/-0\n   ? zeta.txt       +2/-0\n"
     );
 }
 
@@ -133,7 +133,7 @@ fn unstaged_tracked_modifications_and_deletions_render_in_tracked_section() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nTracked (2)\n  D delete.txt  +0/-1\n  M modify.txt  +2/-1\n"
+        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Tracked (2)\n   D delete.txt  +0/-1\n   M modify.txt  +2/-1\n"
     );
 }
 
@@ -153,7 +153,7 @@ fn staged_add_modify_delete_use_index_stats_separate_from_worktree_stats() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nStaged (3)\n  A added.txt   +2/-0\n  D delete.txt  +0/-1\n  M modify.txt  +1/-1\n\nTracked (1)\n  M modify.txt  +1/-0\n"
+        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Staged (3)\n   A added.txt   +2/-0\n   D delete.txt  +0/-1\n   M modify.txt  +1/-1\n\n Tracked (1)\n   M modify.txt  +1/-0\n"
     );
 }
 
@@ -173,7 +173,7 @@ fn partially_staged_file_renders_once_per_section_with_separate_stats() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nStaged (1)\n  M partial.txt  +1/-1\n\nTracked (1)\n  M partial.txt  +1/-0\n"
+        " ──────────────────────\n Branch: main     ↑0 ↓0\n ──────────────────────\n Staged (1)\n   M partial.txt  +1/-1\n\n Tracked (1)\n   M partial.txt  +1/-0\n"
     );
 }
 
@@ -190,7 +190,7 @@ fn staged_renames_render_old_to_new_and_sort_by_destination_path() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nStaged (2)\n  A mmm.txt                     +1/-0\n  R aaa-old.txt -> zzz-new.txt  +0/-0\n"
+        " ─────────────────────────────────────\n Branch: main                    ↑0 ↓0\n ─────────────────────────────────────\n Staged (2)\n   A mmm.txt                     +1/-0\n   R aaa-old.txt -> zzz-new.txt  +0/-0\n"
     );
 }
 
@@ -206,7 +206,7 @@ fn binary_files_render_unknown_stats() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        "main\nTracked (1)\n  M tracked.bin  +?/-?\n\nUntracked (1)\n  ? new.bin      +?/-?\n"
+        " ──────────────────────\n Branch: main     ↑0 ↓0\n ──────────────────────\n Tracked (1)\n   M tracked.bin  +?/-?\n\n Untracked (1)\n   ? new.bin      +?/-?\n"
     );
 }
 
@@ -241,7 +241,7 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
 
     git(repo.path(), &["fetch", "origin"]);
     let output = gs_output(repo.path(), &["--color=never"]);
-    assert_eq!(output, "main ↑1 ↓1\n✓ working tree clean\n");
+    assert_eq!(output, " Branch: main ↑1 ↓1\n ✓ working tree clean\n");
 
     let short = git(repo.path(), &["rev-parse", "--short", "HEAD"])
         .trim()
@@ -250,7 +250,7 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        format!("detached @ {short}\n✓ working tree clean\n")
+        format!(" detached @ {short}\n ✓ working tree clean\n")
     );
 }
 
@@ -263,7 +263,8 @@ fn color_modes_control_ansi_output() {
     assert!(!plain.contains("\x1b["));
 
     let forced = gs_output(repo.path(), &["--color=always"]);
-    assert!(forced.contains("\x1b[38;5;245mUntracked (1)\x1b[0m"));
+    assert!(forced.contains(" Untracked (1)\n"));
+    assert!(forced.contains("\x1b[38;5;245m? new.txt\x1b[0m"));
     assert!(forced.contains("\x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m"));
 
     let auto = gs_output(repo.path(), &["--color=auto"]);
@@ -296,7 +297,7 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     let submodule_path = parent.path().join("vendor/sub");
     write(submodule_path.join("inside.txt"), "dirty internal change\n");
     let output = gs_output(parent.path(), &["--color=never"]);
-    assert_eq!(output, "main\n✓ working tree clean\n");
+    assert_eq!(output, " Branch: main ↑0 ↓0\n ✓ working tree clean\n");
 
     git(
         &submodule_path,
@@ -305,5 +306,8 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     git(&submodule_path, &["config", "user.name", "Submodule User"]);
     commit_all(&submodule_path, "move submodule head");
     let output = gs_output(parent.path(), &["--color=never"]);
-    assert_eq!(output, "main\nTracked (1)\n  M vendor/sub  +?/-?\n");
+    assert_eq!(
+        output,
+        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Tracked (1)\n   M vendor/sub  +?/-?\n"
+    );
 }

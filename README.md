@@ -2,6 +2,23 @@
 
 `gs` prints a compact, colorized enhanced status view for the current Git repository.
 
+```shell
+ ───────────────────────────────────
+ Branch: main                 ↑1 ↓0
+ ───────────────────────────────────
+ Staged (4)
+   M AGENT_LEXICON.md         +8/-4
+   M README.md               +18/-13
+   M src/renderer.rs        +122/-20
+   M tests/cli_behavior.rs   +14/-11
+
+ Tracked (4)
+   M AGENT_LEXICON.md        +19/-13
+   M README.md                +6/-5
+   M src/renderer.rs         +16/-26
+   M tests/cli_behavior.rs   +12/-11
+```
+
 ## Install
 
 ### Requirements
@@ -83,25 +100,29 @@ gs --color=never   # plain output for scripts or copy/paste
 
 ## Output
 
+Output is padded with a one-space left buffer.
+
 A clean repository shows the Branch header and Clean repository output:
 
 ```text
-main
-✓ working tree clean
+ Branch: main ↑0 ↓0
+ ✓ working tree clean
 ```
 
-A repository with changes shows visible Sections only:
+A repository with changes shows the Branch header framed by border lines, followed by visible Sections only:
 
 ```text
-main ↑1 ↓2
-Staged (1)
-  M src/lib.rs      +3/-1
+ ──────────────────────
+ Branch: main     ↑1 ↓2
+ ──────────────────────
+ Staged (1)
+   M src/lib.rs      +3/-1
 
-Tracked (1)
-  D old.txt         +0/-4
+ Tracked (1)
+   D old.txt         +0/-4
 
-Untracked (1)
-  ? notes.txt       +2/-0
+ Untracked (1)
+   ? notes.txt       +2/-0
 ```
 
 Sections:
@@ -115,6 +136,8 @@ Entry stats:
 - `+N/-N`: Known text stats.
 - `+?/-?`: Unknown stats, used for binary, non-line-oriented, or submodule path-level changes.
 - The `/` separator is vertically aligned across entries.
+- In colored output, Section headings stay plain; entries are colored by Section.
+- Additions are green, the `/` separator and border lines are muted gray, and deletions are red.
 
 Path and sorting behavior:
 
@@ -125,8 +148,8 @@ Path and sorting behavior:
 
 Branch header behavior:
 
-- Branches render as `branch ↑ahead ↓behind`.
-- Missing or zero upstream counts are omitted.
+- Branches render as `Branch: branch ↑ahead ↓behind`.
+- Ahead/behind counts are always shown, even when `0`.
 - Detached HEAD renders as `detached @ <short-sha>`.
 
 ## Errors
