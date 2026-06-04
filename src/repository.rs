@@ -10,7 +10,7 @@ use git2::{
 use thiserror::Error;
 
 use crate::model::{
-    BranchHeader, Entry, EntryStats, Section, SectionKind, StatusSymbol, StatusView,
+    BranchHeader, Entry, EntryStats, LatestCommit, Section, SectionKind, StatusSymbol, StatusView,
 };
 
 #[derive(Debug, Error)]
@@ -35,6 +35,7 @@ pub fn inspect_repository(cwd: &Path) -> Result<StatusView, InspectError> {
     })?;
 
     let header = branch_header(&repo)?;
+    let latest_commit = latest_commit(&repo)?;
     let staged = diff_entries(&repo, SectionKind::Staged)?;
     let tracked = diff_entries(&repo, SectionKind::Tracked)?;
     let untracked = untracked_entries(&repo)?;
@@ -45,7 +46,33 @@ pub fn inspect_repository(cwd: &Path) -> Result<StatusView, InspectError> {
         Section::new(SectionKind::Untracked, untracked),
     ];
 
-    Ok(StatusView { header, sections })
+    Ok(StatusView {
+        header,
+        latest_commit,
+        sections,
+    })
+}
+
+fn latest_commit(repo: &Repository) -> Result<Option<LatestCommit>, InspectError> {
+    let head = match repo.head() {
+        Ok(head) => head,
+        Err(error) if error.code() == git2::ErrorCode::UnbornBranch => return Ok(None),
+        Err(error) if error.code() == git2::ErrorCode::NotFound => return Ok(None),
+        Err(error) => return Err(InspectError::Git(error)),
+    };
+    let commit = head.peel_to_commit()?;
+    let subject = commit
+        .message_bytes()
+        .split(|byte| *byte == b'\n')
+        .next()
+        .map(String::from_utf8_lossy)
+        .unwrap_or_default()
+        .into_owned();
+
+    Ok(Some(LatestCommit {
+        short_hash: short_oid(repo, commit.id())?,
+        subject,
+    }))
 }
 
 fn branch_header(repo: &Repository) -> Result<BranchHeader, InspectError> {

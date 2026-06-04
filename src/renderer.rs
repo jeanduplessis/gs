@@ -1,4 +1,4 @@
-use crate::model::{BranchHeader, ColorMode, EntryStats, SectionKind, StatusView};
+use crate::model::{BranchHeader, ColorMode, EntryStats, LatestCommit, SectionKind, StatusView};
 
 const RESET: &str = "\x1b[0m";
 const GREEN: &str = "\x1b[38;5;2m";
@@ -23,16 +23,30 @@ pub fn render(view: &StatusView, color_mode: ColorMode, stdout_is_tty: bool) -> 
     let mut output = String::new();
 
     if visible_sections.is_empty() {
-        let branch_header = render_branch_header(&view.header);
-        let border_width = branch_header
+        let branch_header = render_branch_header(&view.header, use_color);
+        let latest_commit = view
+            .latest_commit
+            .as_ref()
+            .map(|latest_commit| render_latest_commit(latest_commit, use_color));
+        let border_width = render_branch_header(&view.header, false)
             .chars()
             .count()
+            .max(
+                view.latest_commit
+                    .as_ref()
+                    .map(|latest_commit| render_latest_commit(latest_commit, false).chars().count())
+                    .unwrap_or(0),
+            )
             .max("✓ working tree clean".chars().count());
         let border = render_border(border_width, use_color);
         output.push_str(&border);
         output.push('\n');
         output.push_str(&branch_header);
         output.push('\n');
+        if let Some(latest_commit) = latest_commit {
+            output.push_str(&latest_commit);
+            output.push('\n');
+        }
         output.push_str(&border);
         output.push('\n');
         output.push_str("✓ working tree clean\n");
@@ -59,8 +73,13 @@ pub fn render(view: &StatusView, color_mode: ColorMode, stdout_is_tty: bool) -> 
         &view.header,
         max_path_width,
         max_addition_width,
+        use_color,
     ));
     output.push('\n');
+    if let Some(latest_commit) = &view.latest_commit {
+        output.push_str(&render_latest_commit(latest_commit, use_color));
+        output.push('\n');
+    }
     output.push_str(&border);
     output.push('\n');
 
@@ -109,9 +128,14 @@ fn border_width(
     max_path_width: usize,
     max_addition_width: usize,
 ) -> usize {
-    let header_width = render_branch_line(&view.header, max_path_width, max_addition_width)
+    let header_width = render_branch_line(&view.header, max_path_width, max_addition_width, false)
         .chars()
         .count();
+    let latest_commit_width = view
+        .latest_commit
+        .as_ref()
+        .map(|latest_commit| render_latest_commit(latest_commit, false).chars().count())
+        .unwrap_or(0);
     let section_width = visible_sections
         .iter()
         .map(|section| {
@@ -139,7 +163,11 @@ fn border_width(
         .max()
         .unwrap_or(0);
 
-    header_width.max(section_width).max(entry_width).max(1)
+    header_width
+        .max(latest_commit_width)
+        .max(section_width)
+        .max(entry_width)
+        .max(1)
 }
 
 fn render_border(width: usize, use_color: bool) -> String {
@@ -151,14 +179,29 @@ fn render_border(width: usize, use_color: bool) -> String {
     }
 }
 
-fn render_branch_header(header: &BranchHeader) -> String {
+fn render_branch_header(header: &BranchHeader, use_color: bool) -> String {
     match header {
         BranchHeader::Branch {
             name,
             ahead,
             behind,
-        } => format!("Branch: {name} {}", render_branch_stats(*ahead, *behind, 0)),
-        BranchHeader::Detached { short_sha } => format!("detached @ {short_sha}"),
+        } => format!(
+            "Branch: {} {}",
+            colorize(name, GREEN, use_color),
+            render_branch_stats(*ahead, *behind, 0, use_color)
+        ),
+        BranchHeader::Detached { short_sha } => {
+            format!("detached @ {}", colorize(short_sha, TRACKED_TAN, use_color))
+        }
+    }
+}
+
+fn render_latest_commit(latest_commit: &LatestCommit, use_color: bool) -> String {
+    let short_hash = colorize(&latest_commit.short_hash, TRACKED_TAN, use_color);
+    if latest_commit.subject.is_empty() {
+        format!("Commit: {short_hash}")
+    } else {
+        format!("Commit: {short_hash} {}", latest_commit.subject)
     }
 }
 
@@ -166,6 +209,7 @@ fn render_branch_line(
     header: &BranchHeader,
     max_path_width: usize,
     max_addition_width: usize,
+    use_color: bool,
 ) -> String {
     match header {
         BranchHeader::Branch {
@@ -173,21 +217,35 @@ fn render_branch_line(
             ahead,
             behind,
         } => {
-            let label = format!("Branch: {name}");
+            let plain_label = format!("Branch: {name}");
+            let label = format!("Branch: {}", colorize(name, GREEN, use_color));
             let stats_start = 2 + 2 + max_path_width + 2;
-            let stats = render_branch_stats(*ahead, *behind, max_addition_width);
-            let padding = " ".repeat(stats_start.saturating_sub(label.chars().count()).max(2));
+            let stats = render_branch_stats(*ahead, *behind, max_addition_width, use_color);
+            let padding = " ".repeat(
+                stats_start
+                    .saturating_sub(plain_label.chars().count())
+                    .max(2),
+            );
             format!("{label}{padding}{stats}")
         }
-        BranchHeader::Detached { .. } => render_branch_header(header),
+        BranchHeader::Detached { .. } => render_branch_header(header, use_color),
     }
 }
 
-fn render_branch_stats(ahead: usize, behind: usize, max_addition_width: usize) -> String {
+fn render_branch_stats(
+    ahead: usize,
+    behind: usize,
+    max_addition_width: usize,
+    use_color: bool,
+) -> String {
     let ahead_text = format!("↑{ahead}");
     let behind_text = format!("↓{behind}");
     let padding = " ".repeat(max_addition_width.saturating_sub(ahead_text.chars().count()));
-    format!("{padding}{ahead_text} {behind_text}")
+    format!(
+        "{padding}{} {}",
+        colorize(&ahead_text, GREEN, use_color),
+        colorize(&behind_text, RED, use_color)
+    )
 }
 
 fn render_stats(stats: EntryStats, use_color: bool, max_addition_width: usize) -> String {
@@ -219,23 +277,29 @@ fn deletion_text(stats: EntryStats) -> String {
 }
 
 fn colorize_section(text: &str, kind: SectionKind, use_color: bool) -> String {
-    if !use_color {
-        return text.to_string();
-    }
-
     let color = match kind {
         SectionKind::Staged => GREEN,
         SectionKind::Tracked => TRACKED_TAN,
         SectionKind::Untracked => MUTED_GRAY,
     };
 
-    format!("{color}{text}{RESET}")
+    colorize(text, color, use_color)
+}
+
+fn colorize(text: &str, color: &str, use_color: bool) -> String {
+    if use_color {
+        format!("{color}{text}{RESET}")
+    } else {
+        text.to_string()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{BranchHeader, Entry, EntryStats, Section, SectionKind, StatusSymbol};
+    use crate::model::{
+        BranchHeader, Entry, EntryStats, LatestCommit, Section, SectionKind, StatusSymbol,
+    };
 
     #[test]
     fn renders_clean_plain_output() {
@@ -245,12 +309,16 @@ mod tests {
                 ahead: 0,
                 behind: 0,
             },
+            latest_commit: Some(LatestCommit {
+                short_hash: "a1b2c3d".to_string(),
+                subject: "initial commit".to_string(),
+            }),
             sections: vec![],
         };
 
         assert_eq!(
             render(&view, ColorMode::Never, false),
-            " ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n"
+            " ──────────────────────────────\n Branch: main ↑0 ↓0\n Commit: a1b2c3d initial commit\n ──────────────────────────────\n ✓ working tree clean\n"
         );
     }
 
@@ -262,6 +330,10 @@ mod tests {
                 ahead: 2,
                 behind: 1,
             },
+            latest_commit: Some(LatestCommit {
+                short_hash: "d4e5f6a".to_string(),
+                subject: "latest change".to_string(),
+            }),
             sections: vec![
                 Section::new(SectionKind::Staged, vec![]),
                 Section::new(
@@ -292,7 +364,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Never, false),
-            " ───────────────────────────────\n Branch: feature           ↑2 ↓1\n ───────────────────────────────\n Tracked (2)\n   M a.txt                 +1/-0\n   D nested/long-name.txt  +0/-3\n"
+            " ───────────────────────────────\n Branch: feature           ↑2 ↓1\n Commit: d4e5f6a latest change\n ───────────────────────────────\n Tracked (2)\n   M a.txt                 +1/-0\n   D nested/long-name.txt  +0/-3\n"
         );
     }
 
@@ -304,6 +376,7 @@ mod tests {
                 ahead: 0,
                 behind: 0,
             },
+            latest_commit: None,
             sections: vec![Section::new(
                 SectionKind::Untracked,
                 vec![
@@ -343,6 +416,10 @@ mod tests {
                 ahead: 0,
                 behind: 0,
             },
+            latest_commit: Some(LatestCommit {
+                short_hash: "a1b2c3d".to_string(),
+                subject: "color".to_string(),
+            }),
             sections: vec![
                 Section::new(
                     SectionKind::Staged,
@@ -382,7 +459,7 @@ mod tests {
 
         assert_eq!(
             render(&view, ColorMode::Always, false),
-            " \x1b[38;5;244m────────────────────────\x1b[0m\n Branch: main       ↑0 ↓0\n \x1b[38;5;244m────────────────────────\x1b[0m\n Staged (1)\n   \x1b[38;5;2mA staged.txt\x1b[0m     \x1b[38;5;2m+2\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n\n Tracked (1)\n   \x1b[38;5;180mM tracked.txt\x1b[0m    \x1b[38;5;2m+?\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-?\x1b[0m\n\n Untracked (1)\n   \x1b[38;5;245m? untracked.txt\x1b[0m  \x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n"
+            " \x1b[38;5;244m────────────────────────\x1b[0m\n Branch: \x1b[38;5;2mmain\x1b[0m       \x1b[38;5;2m↑0\x1b[0m \x1b[38;5;1m↓0\x1b[0m\n Commit: \x1b[38;5;180ma1b2c3d\x1b[0m color\n \x1b[38;5;244m────────────────────────\x1b[0m\n Staged (1)\n   \x1b[38;5;2mA staged.txt\x1b[0m     \x1b[38;5;2m+2\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n\n Tracked (1)\n   \x1b[38;5;180mM tracked.txt\x1b[0m    \x1b[38;5;2m+?\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-?\x1b[0m\n\n Untracked (1)\n   \x1b[38;5;245m? untracked.txt\x1b[0m  \x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m\n"
         );
     }
 
@@ -394,6 +471,7 @@ mod tests {
                 ahead: 0,
                 behind: 0,
             },
+            latest_commit: None,
             sections: vec![Section::new(
                 SectionKind::Untracked,
                 vec![Entry::new(

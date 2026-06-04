@@ -5,6 +5,7 @@
 ```shell
  ───────────────────────────────────
  Branch: main                 ↑1 ↓0
+ Commit: a1b2c3d Show latest commit
  ───────────────────────────────────
  Staged (4)
    M AGENT_LEXICON.md         +8/-4
@@ -102,21 +103,23 @@ gs --color=never   # plain output for scripts or copy/paste
 
 Output is padded with a one-space left buffer.
 
-A clean repository shows the Branch header framed by border lines plus Clean repository output:
+A clean repository shows the Branch header and Latest commit line framed by border lines plus Clean repository output:
 
 ```text
- ────────────────────
+ ──────────────────────────────
  Branch: main ↑0 ↓0
- ────────────────────
+ Commit: a1b2c3d Initial commit
+ ──────────────────────────────
  ✓ working tree clean
 ```
 
-A repository with changes shows the Branch header framed by border lines, followed by visible Sections only:
+A repository with changes shows the Branch header and Latest commit line framed by border lines, followed by visible Sections only:
 
 ```text
- ──────────────────────
+ ───────────────────────────
  Branch: main     ↑1 ↓2
- ──────────────────────
+ Commit: a1b2c3d Update view
+ ───────────────────────────
  Staged (1)
    M src/lib.rs      +3/-1
 
@@ -138,7 +141,8 @@ Entry stats:
 - `+N/-N`: Known text stats.
 - `+?/-?`: Unknown stats, used for binary, non-line-oriented, or submodule path-level changes.
 - The `/` separator is vertically aligned across entries.
-- In colored output, Section headings stay plain; entries are colored by Section.
+- In colored output, Section headings stay plain; Staged entries are green, Tracked entries are tan, and Untracked entries are muted gray.
+- Branch names and ahead counts are green; behind counts are red; commit hashes are tan.
 - Additions are green, the `/` separator and border lines are muted gray, and deletions are red.
 
 Path and sorting behavior:
@@ -153,6 +157,12 @@ Branch header behavior:
 - Branches render as `Branch: branch ↑ahead ↓behind`.
 - Ahead/behind counts are always shown, even when `0`.
 - Detached HEAD renders as `detached @ <short-sha>`.
+
+Latest commit line behavior:
+
+- Repositories with commits render `Commit: <short-hash> <subject>` below the Branch header.
+- The subject is the first line of the latest commit message at `HEAD`.
+- Unborn branches omit the Latest commit line.
 
 ## Errors
 

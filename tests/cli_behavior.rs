@@ -59,6 +59,11 @@ fn commit_all(dir: &Path, message: &str) {
     git(dir, &["commit", "-m", message]);
 }
 
+fn expected_latest_commit_line(dir: &Path, subject: &str) -> String {
+    let short_hash = git(dir, &["rev-parse", "--short", "HEAD"]);
+    format!("Commit: {} {subject}", short_hash.trim())
+}
+
 fn gs_output(dir: &Path, args: &[&str]) -> String {
     let output = Command::cargo_bin("gs")
         .expect("gs binary")
@@ -80,7 +85,8 @@ fn gs_output(dir: &Path, args: &[&str]) -> String {
 fn clean_repository_output_and_outside_repository_error_are_user_visible() {
     let repo = init_repo();
     write(repo.path().join("README.md"), "# project\n");
-    commit_all(repo.path(), "initial");
+    commit_all(repo.path(), "initial\n\nbody details");
+    let commit = expected_latest_commit_line(repo.path(), "initial");
 
     Command::cargo_bin("gs")
         .expect("gs binary")
@@ -88,7 +94,9 @@ fn clean_repository_output_and_outside_repository_error_are_user_visible() {
         .current_dir(repo.path())
         .assert()
         .success()
-        .stdout(" ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n")
+        .stdout(format!(
+            " ───────────────────────\n Branch: main ↑0 ↓0\n {commit}\n ───────────────────────\n ✓ working tree clean\n"
+        ))
         .stderr("");
 
     let outside = TempDir::new().expect("outside temp dir");
@@ -113,10 +121,13 @@ fn untracked_text_files_are_root_relative_sorted_counted_and_ignore_ignored_file
     write(repo.path().join("ignored.log"), "noise\n");
     fs::create_dir_all(repo.path().join("src/nested")).expect("subdir");
 
+    let commit = expected_latest_commit_line(repo.path(), "ignore rules");
     let output = gs_output(&repo.path().join("src/nested"), &["--color=never"]);
     assert_eq!(
         output,
-        " ────────────────────────\n Branch: main       ↑0 ↓0\n ────────────────────────\n Untracked (2)\n   ? src/alpha.txt  +3/-0\n   ? zeta.txt       +2/-0\n"
+        format!(
+            " ────────────────────────────\n Branch: main       ↑0 ↓0\n {commit}\n ────────────────────────────\n Untracked (2)\n   ? src/alpha.txt  +3/-0\n   ? zeta.txt       +2/-0\n"
+        )
     );
 }
 
@@ -130,10 +141,13 @@ fn unstaged_tracked_modifications_and_deletions_render_in_tracked_section() {
     fs::remove_file(repo.path().join("delete.txt")).expect("delete file");
     write(repo.path().join("modify.txt"), "new\nkeep\nadded\n");
 
+    let commit = expected_latest_commit_line(repo.path(), "initial");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Tracked (2)\n   D delete.txt  +0/-1\n   M modify.txt  +2/-1\n"
+        format!(
+            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n Tracked (2)\n   D delete.txt  +0/-1\n   M modify.txt  +2/-1\n"
+        )
     );
 }
 
@@ -150,10 +164,13 @@ fn staged_add_modify_delete_use_index_stats_separate_from_worktree_stats() {
     git(repo.path(), &["add", "-A"]);
     write(repo.path().join("modify.txt"), "new\nkeep\nunstaged\n");
 
+    let commit = expected_latest_commit_line(repo.path(), "initial");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Staged (3)\n   A added.txt   +2/-0\n   D delete.txt  +0/-1\n   M modify.txt  +1/-1\n\n Tracked (1)\n   M modify.txt  +1/-0\n"
+        format!(
+            " ───────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ───────────────────────\n Staged (3)\n   A added.txt   +2/-0\n   D delete.txt  +0/-1\n   M modify.txt  +1/-1\n\n Tracked (1)\n   M modify.txt  +1/-0\n"
+        )
     );
 }
 
@@ -170,10 +187,13 @@ fn partially_staged_file_renders_once_per_section_with_separate_stats() {
         "a\nb staged\nc\nunstaged\n",
     );
 
+    let commit = expected_latest_commit_line(repo.path(), "initial");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ──────────────────────\n Branch: main     ↑0 ↓0\n ──────────────────────\n Staged (1)\n   M partial.txt  +1/-1\n\n Tracked (1)\n   M partial.txt  +1/-0\n"
+        format!(
+            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n Staged (1)\n   M partial.txt  +1/-1\n\n Tracked (1)\n   M partial.txt  +1/-0\n"
+        )
     );
 }
 
@@ -187,10 +207,13 @@ fn staged_renames_render_old_to_new_and_sort_by_destination_path() {
     write(repo.path().join("mmm.txt"), "middle\n");
     git(repo.path(), &["add", "mmm.txt"]);
 
+    let commit = expected_latest_commit_line(repo.path(), "initial");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ─────────────────────────────────────\n Branch: main                    ↑0 ↓0\n ─────────────────────────────────────\n Staged (2)\n   A mmm.txt                     +1/-0\n   R aaa-old.txt -> zzz-new.txt  +0/-0\n"
+        format!(
+            " ─────────────────────────────────────\n Branch: main                    ↑0 ↓0\n {commit}\n ─────────────────────────────────────\n Staged (2)\n   A mmm.txt                     +1/-0\n   R aaa-old.txt -> zzz-new.txt  +0/-0\n"
+        )
     );
 }
 
@@ -203,10 +226,13 @@ fn binary_files_render_unknown_stats() {
     write(repo.path().join("tracked.bin"), [0, 1, 9, 3]);
     write(repo.path().join("new.bin"), [0, 159, 146, 150]);
 
+    let commit = expected_latest_commit_line(repo.path(), "initial");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ──────────────────────\n Branch: main     ↑0 ↓0\n ──────────────────────\n Tracked (1)\n   M tracked.bin  +?/-?\n\n Untracked (1)\n   ? new.bin      +?/-?\n"
+        format!(
+            " ───────────────────────\n Branch: main     ↑0 ↓0\n {commit}\n ───────────────────────\n Tracked (1)\n   M tracked.bin  +?/-?\n\n Untracked (1)\n   ? new.bin      +?/-?\n"
+        )
     );
 }
 
@@ -240,10 +266,13 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
     git(&other_clone, &["push", "origin", "main"]);
 
     git(repo.path(), &["fetch", "origin"]);
+    let commit = expected_latest_commit_line(repo.path(), "local ahead");
     let output = gs_output(repo.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ────────────────────\n Branch: main ↑1 ↓1\n ────────────────────\n ✓ working tree clean\n"
+        format!(
+            " ───────────────────────────\n Branch: main ↑1 ↓1\n {commit}\n ───────────────────────────\n ✓ working tree clean\n"
+        )
     );
 
     let short = git(repo.path(), &["rev-parse", "--short", "HEAD"])
@@ -254,7 +283,7 @@ fn branch_header_renders_upstream_divergence_and_detached_head() {
     assert_eq!(
         output,
         format!(
-            " ────────────────────\n detached @ {short}\n ────────────────────\n ✓ working tree clean\n"
+            " ───────────────────────────\n detached @ {short}\n {commit}\n ───────────────────────────\n ✓ working tree clean\n"
         )
     );
 }
@@ -266,8 +295,11 @@ fn color_modes_control_ansi_output() {
 
     let plain = gs_output(repo.path(), &["--color=never"]);
     assert!(!plain.contains("\x1b["));
+    assert!(!plain.contains("Commit:"));
 
     let forced = gs_output(repo.path(), &["--color=always"]);
+    assert!(forced.contains(" Branch: \x1b[38;5;2mmain\x1b[0m"));
+    assert!(forced.contains("\x1b[38;5;2m↑0\x1b[0m \x1b[38;5;1m↓0\x1b[0m"));
     assert!(forced.contains(" Untracked (1)\n"));
     assert!(forced.contains("\x1b[38;5;245m? new.txt\x1b[0m"));
     assert!(forced.contains("\x1b[38;5;2m+1\x1b[0m\x1b[38;5;244m/\x1b[0m\x1b[38;5;1m-0\x1b[0m"));
@@ -299,12 +331,15 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     assert!(output.contains("+?/-?"), "{output}");
 
     commit_all(parent.path(), "add submodule");
+    let commit = expected_latest_commit_line(parent.path(), "add submodule");
     let submodule_path = parent.path().join("vendor/sub");
     write(submodule_path.join("inside.txt"), "dirty internal change\n");
     let output = gs_output(parent.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ────────────────────\n Branch: main ↑0 ↓0\n ────────────────────\n ✓ working tree clean\n"
+        format!(
+            " ─────────────────────────────\n Branch: main ↑0 ↓0\n {commit}\n ─────────────────────────────\n ✓ working tree clean\n"
+        )
     );
 
     git(
@@ -316,6 +351,8 @@ fn submodule_path_level_changes_are_unknown_and_internal_changes_are_excluded() 
     let output = gs_output(parent.path(), &["--color=never"]);
     assert_eq!(
         output,
-        " ─────────────────────\n Branch: main    ↑0 ↓0\n ─────────────────────\n Tracked (1)\n   M vendor/sub  +?/-?\n"
+        format!(
+            " ─────────────────────────────\n Branch: main    ↑0 ↓0\n {commit}\n ─────────────────────────────\n Tracked (1)\n   M vendor/sub  +?/-?\n"
+        )
     );
 }

@@ -5,7 +5,8 @@ pub mod repository;
 use std::path::Path;
 
 pub use model::{
-    BranchHeader, ColorMode, Entry, EntryStats, Section, SectionKind, StatusSymbol, StatusView,
+    BranchHeader, ColorMode, Entry, EntryStats, LatestCommit, Section, SectionKind, StatusSymbol,
+    StatusView,
 };
 pub use renderer::render;
 pub use repository::{InspectError, inspect_repository};

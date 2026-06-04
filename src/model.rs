@@ -1,7 +1,14 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatusView {
     pub header: BranchHeader,
+    pub latest_commit: Option<LatestCommit>,
     pub sections: Vec<Section>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LatestCommit {
+    pub short_hash: String,
+    pub subject: String,
 }
 
 impl StatusView {
